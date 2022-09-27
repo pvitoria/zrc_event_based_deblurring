@@ -41,15 +41,8 @@ class DCN_sep(nn.Module):
             print('Offset mean is {}, larger than 100.'.format(offset_mean))
 
         mask = torch.sigmoid(mask)
-        #offset_out = torch.cat([o1, o2], dim=1) if self.kernel_size  == 1 else torch.cat(
-        #        [o1[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1), 
-        #         o2[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1)], dim=1),
-        offset_out = torch.cat([o1, o2], dim=1) if self.kernel_size  == 1 else torch.cat(
-                [o1[:, :, :, :], 
-                 o2[:, :, :, :]], dim=1),
-        mask_out = mask if self.kernel_size  == 1 else mask[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1)
 
-        return self.dcn_v2_conv(input, offset, mask), offset_out, mask_out
+        return self.dcn_v2_conv(input, offset, mask)
     
     
 class GatedCompression(nn.Module):
@@ -127,8 +120,6 @@ class EventPCDAlignment(nn.Module):
         # Pyramids
         upsampled_offset, upsampled_feat = None, None
         aligned_feat = []
-        offsets_dcn = []
-        masks_dcn = []
         for i in range(self.levels, 0, -1):
             level = f'l{i}'
             offset = self.offset_conv1[level](evs_feat_l[i - 1])[1][0][0]
@@ -138,9 +129,8 @@ class EventPCDAlignment(nn.Module):
                 offset = self.lrelu(self.offset_conv2[level](torch.cat([offset, upsampled_offset], dim=1)))
                 offset = self.lrelu(self.offset_conv3[level](offset))
             
-            feat, offset_dcn, mask_dcn = self.dcn_pack[level](img_feat_l[i - 1], offset)
-            offsets_dcn.insert(0, offset_dcn)
-            masks_dcn.insert(0, mask_dcn)
+            feat = self.dcn_pack[level](img_feat_l[i - 1], offset)
+
             if i < self.levels:
                 feat = self.feat_conv[level](torch.cat([feat, upsampled_feat], dim=1))
             if i > 1:
@@ -151,7 +141,7 @@ class EventPCDAlignment(nn.Module):
                 upsampled_offset = self.upsample(offset) * 2
                 upsampled_feat = self.upsample(feat)
             aligned_feat.insert(0, feat)
-        return aligned_feat, offsets_dcn, masks_dcn
+        return aligned_feat
 
     
     
@@ -260,7 +250,7 @@ class model(nn.Module):
             img_feat_l2,
             img_feat_l3
         ]
-        deblur_feat, deblur_offsets, deblur_masks = self.pcd_align(evs_feat_l, img_feat_l)
+        deblur_feat = self.pcd_align(evs_feat_l, img_feat_l)
 
         
         # l3 
