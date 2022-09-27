@@ -1,7 +1,5 @@
-import numpy as np
 import os
 from argparse import ArgumentParser
-import cv2
 import torch
 import torch.nn as nn
 from torch import optim
@@ -52,7 +50,6 @@ class Net(pl.LightningModule):
 
 # pretrained model
 checkpoint_folder = './checkpoints/'
-PRINT_RESULTS = True
 print('Starting model')
 experiment = 'Original'
 file = 'model.ckpt' 
@@ -64,7 +61,6 @@ PATH_TO_CHECKPOINT = os.path.join(checkpoint_folder,file)
 
 print('loading checkpoints')
 net = Net.load_from_checkpoint(PATH_TO_CHECKPOINT, strict=False)
-
 net.freeze()
 net.to(device)
 
@@ -94,7 +90,7 @@ for idx in range(len(dataset)):
     vg = vg.unsqueeze(0)    
     vg = vg.to(device=device, dtype=torch.float32)
     
-    #vg_un_0 = torch.tensor(vg_un_0)
+
     vg_un_0 = vg_un_0.unsqueeze(0)    
     vg_un_0 = vg_un_0.to(device=device, dtype=torch.float32)
 
@@ -102,8 +98,6 @@ for idx in range(len(dataset)):
     output = b_gt + outputs[0]
     pred = torch.clamp(output, -1.0, 1.0)
 
-
-    if PRINT_RESULTS:
-        save_image(pred[0]/2.0+0.5,os.path.join(args.results_folder, test_folder)+'/'+sample['file_name']+"_"+"_pred.png")
-        print('image saved in ', os.path.join(args.results_folder, test_folder)+'/'+sample['file_name']+"_"+"_pred.png")
+    save_image(pred[0]/2.0+0.5,os.path.join(args.results_folder, test_folder)+'/'+sample['file_name']+"_"+"_pred.png")
+    print('image saved in ', os.path.join(args.results_folder, test_folder)+'/'+sample['file_name']+"_"+"_pred.png")
 
