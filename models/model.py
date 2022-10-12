@@ -45,26 +45,7 @@ class DCN_sep(nn.Module):
         return self.dcn_v2_conv(input, offset, mask)
     
     
-class GatedCompression(nn.Module):
-    def __init__(self, number_of_features_per_input, number_of_inputs):
-        super(GatedCompression, self).__init__()
-        number_of_input_features = number_of_features_per_input * number_of_inputs
-        self._gating = nn.Sequential(
-            nn.Conv2d(number_of_input_features, number_of_input_features, 3, stride=1, padding=1),
-            nn.Sigmoid()
-        )
-        self._compression = nn.Sequential(
-            nn.Conv2d(number_of_input_features, number_of_features_per_input, 3, stride=1, padding=1),
-            nn.LeakyReLU(negative_slope=0.1)
-        )
-    
-    def forward(self, inputs):
-        feats = torch.cat(inputs, dim=1)
-        attenuation = self._gating(feats)
-        result = self._compression(feats*attenuation)
-        return attenuation, result
-    
-    
+
     
 class EventPCDAlignment(nn.Module):
     """Alignment module using Pyramid, Cascading and Deformable convolution (PCD). It estimates offsets from events.
@@ -179,9 +160,6 @@ class model(nn.Module):
         # pcd module
         self.pcd_align = EventPCDAlignment(num_feat=num_feat, deformable_groups=deformable_groups, kernel_size = kernel_size)
         
-        
-        self.compresion_l1 = GatedCompression(num_feat, 2)
-        self.compresion_l2 = GatedCompression(num_feat, 2)
         
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
         
