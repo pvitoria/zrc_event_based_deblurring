@@ -4,6 +4,8 @@ This repository is about the [**Event-based Image Deblurring with Dynamic Motion
 
 by Patricia Vitoria, Stamatios Georgoulis, Stepan Tulyakov, Alfredo Bochicchio, Julius Erbach and  Yuanyou Li.
 
+[<img width="900" src="figures/resultsGOPRO.png?raw=true">](figures/resultsGOPRO.png?raw=true)
+
 
 
 ## Prerequisits 
