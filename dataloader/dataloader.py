@@ -61,7 +61,7 @@ class GoProDataset:
             sample_dictionary['latent_images'] =sharp_tensor*2.0-1.0
         except:
             print(' not gt found for image ', file_name)
-        events = np.load(event_folder)
+        events = np.float32(np.load(event_folder))
         timestamps = np.arange(0.0, 1.0 + 1e-7, 1 / (self.num_frames-1))
         event_sequence = event.EventSequence(events, blur.shape[0],blur.shape[1], 0.0, 1.0)
 
