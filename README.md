@@ -54,3 +54,6 @@ A pdf of the paper is [available here](https://arxiv.org/pdf/2208.11398.pdf). If
 }
 
 ```
+
+### License
+This project is under the Apache 2.0 license, and it is based on BasicSR which is under the Apache 2.0 license.
