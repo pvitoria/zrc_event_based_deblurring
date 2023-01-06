@@ -5,6 +5,13 @@ from models.conv_lstm import ConvLSTM
 from torchvision.ops import DeformConv2d
 
 
+
+##############################################################################################################################
+##################################################### Based on basicsr EDVR ##################################################
+####################### https://github.com/XPixelGroup/BasicSR/blob/master/basicsr/archs/arch_util.py ########################
+##############################################################################################################################
+
+
 class DCN_sep(nn.Module):
     '''Use other features to generate offsets and masks'''
 
