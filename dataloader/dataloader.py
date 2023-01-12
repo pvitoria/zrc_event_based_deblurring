@@ -54,7 +54,7 @@ class GoProDataset:
         
         blur = cv2.imread(sample)
         blur_tensor = kornia.image_to_tensor(blur[:, :, ::-1].copy(), keepdim = False).float()/255.0
-        
+        sample_dictionary = {}
         try:
             sharp = cv2.imread(sharp_folder)
             sharp_tensor = kornia.image_to_tensor(sharp[:, :, ::-1].copy(), keepdim = False).float()/255.0
@@ -84,7 +84,6 @@ class GoProDataset:
 
 
         # prepare sample dictionary
-        sample_dictionary = {}
         sample_dictionary['blur'] =  blur_tensor*2.0-1.0
         vg = torch.zeros(13,self.number_of_time_bins,blur.shape[0],blur.shape[1])
         for i in range(len(voxel_grid)):
