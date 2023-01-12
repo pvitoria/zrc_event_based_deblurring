@@ -10,8 +10,6 @@ from torchvision.ops import DeformConv2d
 ##################################################### Based on basicsr EDVR ##################################################
 ####################### https://github.com/XPixelGroup/BasicSR/blob/master/basicsr/archs/arch_util.py ########################
 ##############################################################################################################################
-
-
 class DCN_sep(nn.Module):
     '''Use other features to generate offsets and masks'''
 
@@ -48,11 +46,37 @@ class DCN_sep(nn.Module):
             print('Offset mean is {}, larger than 100.'.format(offset_mean))
 
         mask = torch.sigmoid(mask)
+        #offset_out = torch.cat([o1, o2], dim=1) if self.kernel_size  == 1 else torch.cat(
+        #        [o1[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1), 
+        #         o2[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1)], dim=1),
+        offset_out = torch.cat([o1, o2], dim=1) if self.kernel_size  == 1 else torch.cat(
+                [o1[:, :, :, :], 
+                 o2[:, :, :, :]], dim=1),
+        mask_out = mask if self.kernel_size  == 1 else mask[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1)
 
-        return self.dcn_v2_conv(input, offset, mask)
+        return self.dcn_v2_conv(input, offset, mask), offset_out, mask_out
     
     
-
+class GatedCompression(nn.Module):
+    def __init__(self, number_of_features_per_input, number_of_inputs):
+        super(GatedCompression, self).__init__()
+        number_of_input_features = number_of_features_per_input * number_of_inputs
+        self._gating = nn.Sequential(
+            nn.Conv2d(number_of_input_features, number_of_input_features, 3, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+        self._compression = nn.Sequential(
+            nn.Conv2d(number_of_input_features, number_of_features_per_input, 3, stride=1, padding=1),
+            nn.LeakyReLU(negative_slope=0.1)
+        )
+    
+    def forward(self, inputs):
+        feats = torch.cat(inputs, dim=1)
+        attenuation = self._gating(feats)
+        result = self._compression(feats*attenuation)
+        return attenuation, result
+    
+    
     
 class EventPCDAlignment(nn.Module):
     """Alignment module using Pyramid, Cascading and Deformable convolution (PCD). It estimates offsets from events.
@@ -108,6 +132,8 @@ class EventPCDAlignment(nn.Module):
         # Pyramids
         upsampled_offset, upsampled_feat = None, None
         aligned_feat = []
+        offsets_dcn = []
+        masks_dcn = []
         for i in range(self.levels, 0, -1):
             level = f'l{i}'
             offset = self.offset_conv1[level](evs_feat_l[i - 1])[1][0][0]
@@ -117,8 +143,9 @@ class EventPCDAlignment(nn.Module):
                 offset = self.lrelu(self.offset_conv2[level](torch.cat([offset, upsampled_offset], dim=1)))
                 offset = self.lrelu(self.offset_conv3[level](offset))
             
-            feat = self.dcn_pack[level](img_feat_l[i - 1], offset)
-
+            feat, offset_dcn, mask_dcn = self.dcn_pack[level](img_feat_l[i - 1], offset)
+            offsets_dcn.insert(0, offset_dcn)
+            masks_dcn.insert(0, mask_dcn)
             if i < self.levels:
                 feat = self.feat_conv[level](torch.cat([feat, upsampled_feat], dim=1))
             if i > 1:
@@ -129,7 +156,7 @@ class EventPCDAlignment(nn.Module):
                 upsampled_offset = self.upsample(offset) * 2
                 upsampled_feat = self.upsample(feat)
             aligned_feat.insert(0, feat)
-        return aligned_feat
+        return aligned_feat, offsets_dcn, masks_dcn
 
     
     
@@ -167,6 +194,9 @@ class model(nn.Module):
         # pcd module
         self.pcd_align = EventPCDAlignment(num_feat=num_feat, deformable_groups=deformable_groups, kernel_size = kernel_size)
         
+        
+        self.compresion_l1 = GatedCompression(num_feat, 2)
+        self.compresion_l2 = GatedCompression(num_feat, 2)
         
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
         
@@ -235,7 +265,7 @@ class model(nn.Module):
             img_feat_l2,
             img_feat_l3
         ]
-        deblur_feat = self.pcd_align(evs_feat_l, img_feat_l)
+        deblur_feat, deblur_offsets, deblur_masks = self.pcd_align(evs_feat_l, img_feat_l)
 
         
         # l3 
