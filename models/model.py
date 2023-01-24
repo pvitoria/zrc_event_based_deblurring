@@ -46,15 +46,7 @@ class DCN_sep(nn.Module):
             print('Offset mean is {}, larger than 100.'.format(offset_mean))
 
         mask = torch.sigmoid(mask)
-        #offset_out = torch.cat([o1, o2], dim=1) if self.kernel_size  == 1 else torch.cat(
-        #        [o1[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1), 
-        #         o2[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1)], dim=1),
-        offset_out = torch.cat([o1, o2], dim=1) if self.kernel_size  == 1 else torch.cat(
-                [o1[:, :, :, :], 
-                 o2[:, :, :, :]], dim=1),
-        mask_out = mask if self.kernel_size  == 1 else mask[:, self.kernel_size  * self.kernel_size  // 2, :, :].unsqueeze(1)
-
-        return self.dcn_v2_conv(input, offset, mask), offset_out, mask_out
+        return self.dcn_v2_conv(input, offset, mask)
     
     
 class GatedCompression(nn.Module):
@@ -265,7 +257,7 @@ class model(nn.Module):
             img_feat_l2,
             img_feat_l3
         ]
-        deblur_feat, deblur_offsets, deblur_masks = self.pcd_align(evs_feat_l, img_feat_l)
+        deblur_feat = self.pcd_align(evs_feat_l, img_feat_l)
 
         
         # l3 
