@@ -42,6 +42,10 @@ You can change the results directory with
 python demo.py --results_dir DIR_TO_SAVE_RESULTS
 ```
 
+### Checkpoints
+
+Checkpoitns are [available here](https://drive.google.com/drive/folders/11ozMUSctpSfxJcKgwn7cT_tL-yWIcZV3?usp=drive_link).
+
 ### Citation
 A pdf of the paper is [available here](https://arxiv.org/pdf/2208.11398.pdf). If you this code please cite this publication as follows:
 
